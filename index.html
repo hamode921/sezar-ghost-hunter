@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHOST HUNTER V2.4 - المطور سيزار</title>
+    <title>GHOST HUNTER V2.5 - المطور سيزار</title>
     <style>
         :root { --gold: #fbbf24; --ghost: #a855f7; --bg: #030303; --card: #0a0a0a; --red: #ef4444; --green: #22c55e; }
         body { background: var(--bg); color: #fff; font-family: monospace; padding: 10px; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
@@ -12,23 +12,16 @@
         .search-box { width: 95%; max-width: 550px; margin-bottom: 20px; }
         input { width: 100%; padding: 15px; background: #111; border: 1px solid #333; color: var(--gold); border-radius: 12px; text-align: center; font-weight: bold; font-size: 18px; outline: none; box-sizing: border-box; }
         
-        /* البطاقات العلوية (Detected/Stable) */
         .monitor-panel { width: 95%; max-width: 550px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;}
-        .card { background: var(--card); border: 1px solid #222; padding: 15px; border-radius: 12px; text-align: center; transition: 0.3s; }
-        .card-label { font-size: 10px; color: #555; margin-bottom: 5px; }
-        .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 5px; font-weight: bold; margin-bottom: 8px; display: inline-block; }
+        .card { background: var(--card); border: 1px solid #222; padding: 15px; border-radius: 12px; text-align: center; }
+        .card-label { font-size: 10px; color: #555; margin-top: 5px; }
+        .status-badge { font-size: 11px; padding: 3px 8px; border-radius: 5px; font-weight: bold; display: inline-block; }
         .safe { background: #064e3b; color: var(--green); }
         .danger { background: #450a0a; color: var(--red); }
         .ghost-alert { border: 1px solid var(--ghost) !important; animation: sezarPulse 1.5s infinite; }
         @keyframes sezarPulse { 0% { box-shadow: 0 0 0px var(--ghost); } 50% { box-shadow: 0 0 10px var(--ghost); } 100% { box-shadow: 0 0 0px var(--ghost); } }
 
-        /* ميزان القوة */
-        .battle-meter { width: 95%; max-width: 550px; background: #111; border-radius: 10px; height: 30px; margin-bottom: 20px; position: relative; overflow: hidden; display: flex; align-items: center; border: 1px solid #222; }
-        #power-buyer { background: var(--green); height: 100%; width: 50%; transition: 0.8s; opacity: 0.6; }
-        #power-seller { background: var(--red); height: 100%; width: 50%; transition: 0.8s; opacity: 0.6; }
-        .battle-text { position: absolute; width: 100%; text-align: center; font-size: 11px; font-weight: bold; z-index: 5; }
-
-        /* لوحة الصيد المالية */
+        /* لوحة الصيد المالية المتطورة */
         .iceberg-panel { width: 95%; max-width: 550px; background: var(--card); border: 2px solid #222; border-radius: 15px; padding: 10px; box-sizing: border-box; }
         .ice-header { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; font-size: 11px; color: #555; }
         .iceberg-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 10px; border-bottom: 1px solid #111; font-size: 13px; }
@@ -42,8 +35,8 @@
 <body onload="startAnalysis()">
 
     <div class="sezar-header">
-        <h1 style="color:var(--gold); margin:0; font-size: 18px;">「 GHOST HUNTER V2.4 」</h1>
-        <div style="font-size: 10px; color:#555;">نسخة سيزار المتكاملة - صيد مالي 💰</div>
+        <h1 style="color:var(--gold); margin:0; font-size: 18px;">「 GHOST HUNTER V2.5 」</h1>
+        <div style="font-size: 10px; color:#555;">نظام سيزار المعدل - كاشف السيولة المخفية 💰</div>
     </div>
 
     <div class="search-box">
@@ -61,11 +54,6 @@
         </div>
     </div>
 
-    <div class="battle-meter">
-        <div id="power-buyer"></div><div id="power-seller"></div>
-        <div class="battle-text" id="battle-label">قياس سيطرة الحيتان...</div>
-    </div>
-
     <div class="iceberg-panel">
         <div style="text-align:center; font-size:12px; color:var(--gold); margin-bottom:10px;">「 SEZAR'S ICEBERG HUNTER 」</div>
         <div class="ice-header"><span>سعر الهدف</span><span>المبلغ ($)</span><span>النية</span></div>
@@ -76,13 +64,14 @@
 
     <script>
         let currentSymbol = '', pInt, alertAudio = new Audio('https://www.soundjay.com/buttons/beep-07a.mp3');
-        let lastBids = [], lastAsks = [], totalB = 0, totalS = 0;
+        let lastBids = [], lastAsks = [];
 
         function startAnalysis() {
             const sym = document.getElementById('symbol').value.toUpperCase();
             if(sym === currentSymbol) return;
             currentSymbol = sym; clearInterval(pInt);
-            totalB = 0; totalS = 0; document.getElementById('iceberg-list').innerHTML = '';
+            document.getElementById('iceberg-list').innerHTML = '';
+            addLog(`تم تشغيل المحرك لعملة ${currentSymbol}`);
             fetchData(); pInt = setInterval(fetchData, 2000);
         }
 
@@ -97,24 +86,30 @@
         function analyze(bids, asks) {
             let found = [];
             if (lastBids.length > 0) {
-                // فحص تجديد الشراء
+                // فحص تجديد الشراء (Buying Iceberg) بالدولار
                 if (parseFloat(bids[0][0]) === parseFloat(lastBids[0][0])) {
                     let d = parseFloat(bids[0][1]) - parseFloat(lastBids[0][1]);
-                    if (d > 0.1) { let m = d * bids[0][0]; found.push({p: bids[0][0], m: m, t: 'Buyer'}); totalB += m; }
+                    if (d > 0.01) { 
+                        let money = d * bids[0][0]; 
+                        found.push({p: bids[0][0], m: money, t: 'Buyer'}); 
+                    }
                 }
-                // فحص تجديد البيع
+                // فحص تجديد البيع (Selling Iceberg) بالدولار
                 if (parseFloat(asks[0][0]) === parseFloat(lastAsks[0][0])) {
                     let d = parseFloat(asks[0][1]) - parseFloat(lastAsks[0][1]);
-                    if (d > 0.1) { let m = d * asks[0][0]; found.push({p: asks[0][0], m: m, t: 'Seller'}); totalS += m; }
+                    if (d > 0.01) { 
+                        let money = d * asks[0][0]; 
+                        found.push({p: asks[0][0], m: money, t: 'Seller'}); 
+                    }
                 }
             }
 
             if (found.length > 0) {
                 alertAudio.play();
                 document.getElementById('ice-card').classList.add('ghost-alert');
-                document.getElementById('ice-status').innerText = "DETECTED";
+                document.getElementById('ice-status').innerText = "ICEBERG DETECTED";
                 document.getElementById('ice-status').className = "status-badge danger";
-                updateMeter(); updateList(found);
+                updateList(found);
             } else {
                 document.getElementById('ice-card').classList.remove('ghost-alert');
                 document.getElementById('ice-status').innerText = "SCANNING";
@@ -123,22 +118,21 @@
             lastBids = bids; lastAsks = asks;
         }
 
-        function updateMeter() {
-            let total = totalB + totalS; if (total === 0) return;
-            let bP = (totalB / total) * 100;
-            document.getElementById('power-buyer').style.width = bP + "%";
-            document.getElementById('power-seller').style.width = (100-bP) + "%";
-            document.getElementById('battle-label').innerText = bP > 50 ? `سيطرة شراء (${bP.toFixed(0)}%)` : `سيطرة بيع (${(100-bP).toFixed(0)}%)`;
-        }
-
         function updateList(arr) {
             const list = document.getElementById('iceberg-list');
             arr.forEach(ice => {
                 const row = document.createElement('div');
                 row.className = 'iceberg-row';
+                // تنسيق المبلغ بالآلاف أو الملايين
                 const m = ice.m >= 1000000 ? (ice.m/1000000).toFixed(2) + "M" : (ice.m/1000).toFixed(1) + "K";
-                row.innerHTML = `<span class="price-tag">$${parseFloat(ice.p).toLocaleString()}</span><span class="amount-tag">$${m}</span><span class="type-tag" style="color:${ice.t==='Buyer'?'var(--green)':'var(--red)'}">${ice.t.toUpperCase()}</span>`;
+                
+                row.innerHTML = `
+                    <span class="price-tag">$${parseFloat(ice.p).toLocaleString()}</span>
+                    <span class="amount-tag">$${m}</span>
+                    <span class="type-tag" style="color:${ice.t==='Buyer'?'var(--green)':'var(--red)'}">${ice.t.toUpperCase()}</span>
+                `;
                 list.prepend(row);
+                addLog(`حوت ${ice.t} ضخ $${m} عند سعر $${ice.p}`);
                 if (list.children.length > 10) list.removeChild(list.lastChild);
             });
         }
@@ -146,7 +140,7 @@
         function addLog(msg) {
             const log = document.getElementById('log-container');
             const e = document.createElement('div'); e.innerHTML = `> ${msg}`;
-            log.prepend(e); if (log.children.length > 10) log.removeChild(log.lastChild);
+            log.prepend(e); if (log.children.length > 15) log.removeChild(log.lastChild);
         }
     </script>
 </body>
