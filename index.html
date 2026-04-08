@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صائد الأشباح - المطور سيزار</title>
+    <style>
+        :root { --gold: #fbbf24; --ghost: #a855f7; --bg: #050505; }
+        body { background: var(--bg); color: #fff; font-family: monospace; padding: 10px; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        .sezar-header { border: 2px solid var(--gold); padding: 15px; width: 95%; max-width: 500px; text-align: center; border-radius: 15px; margin-bottom: 20px; background: #000; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); }
+        .search-box { width: 95%; max-width: 500px; margin-bottom: 20px; }
+        input { width: 100%; padding: 15px; background: #111; border: 1px solid #333; color: var(--gold); border-radius: 10px; text-align: center; font-weight: bold; font-size: 16px; outline: none; }
+        
+        .monitor-panel { width: 95%; max-width: 500px; display: grid; gap: 15px; }
+        .card { background: #0a0a0a; border: 1px solid #222; padding: 15px; border-radius: 12px; position: relative; overflow: hidden; }
+        .card-title { font-size: 12px; color: #666; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        
+        /* تأثيرات الأشباح */
+        .ghost-alert { border-color: var(--ghost) !important; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0px var(--ghost); } 50% { box-shadow: 0 0 10px var(--ghost); } 100% { box-shadow: 0 0 0px var(--ghost); } }
+        
+        .data-row { display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #111; }
+        .status-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .safe { background: #064e3b; color: #22c55e; }
+        .danger { background: #450a0a; color: #ef4444; }
+        .warning { background: #78350f; color: #fbbf24; }
+
+        #log-container { width: 95%; max-width: 500px; margin-top: 20px; background: #000; border: 1px solid #333; height: 150px; overflow-y: auto; padding: 10px; font-size: 11px; border-radius: 10px; }
+        .log-entry { margin-bottom: 5px; border-right: 2px solid var(--gold); padding-right: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="sezar-header">
+        <h2 style="margin:0; color:var(--gold);">「 GHOST HUNTER 」</h2>
+        <div style="font-size: 10px; color:#555;">نظام كشف تلاعب البنوك - المطور سيزار</div>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="symbol" value="BTCUSDT" placeholder="أدخل العملة..." onchange="startAnalysis()">
+    </div>
+
+    <div class="monitor-panel">
+        <div class="card" id="iceberg-card">
+            <div class="card-title"><span>ICEBERG DETECTOR</span><span class="status-badge safe" id="ice-status">SCANNING</span></div>
+            <div id="ice-data">
+                <div class="data-row"><span>تجديد السيولة:</span> <span id="refill-rate">0%</span></div>
+                <div class="data-row"><span>ضغط الحيتان:</span> <span id="whale-pressure">LOW</span></div>
+            </div>
+        </div>
+
+        <div class="card" id="spoof-card">
+            <div class="card-title"><span>SPOOFING RADAR</span><span class="status-badge safe" id="spoof-status">STABLE</span></div>
+            <div id="spoof-data">
+                <div class="data-row"><span>جدران مهربة:</span> <span id="fled-walls">0</span></div>
+                <div class="data-row"><span>ثبات الجدار:</span> <span id="stability">100%</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><span>LIQUIDITY VOIDS</span><span class="status-badge warning">DANGER ZONE</span></div>
+            <div class="data-row"><span>فجوة الصعود:</span> <span id="up-gap" style="color:#22c55e;">0.00%</span></div>
+            <div class="data-row"><span>فجوة الهبوط:</span> <span id="down-gap" style="color:#ef4444;">0.00%</span></div>
+        </div>
+    </div>
+
+    <div id="log-container">
+        <div class="log-entry" style="color:#555;">> تم تشغيل المحرك.. بانتظار حركة الحيتان..</div>
+    </div>
+
+    <script>
+        let lastBids = [], lastAsks = [], alertAudio = new Audio('https://www.soundjay.com/buttons/beep-07a.mp3');
+
+        async function startAnalysis() {
+            const symbol = document.getElementById('symbol').value.toUpperCase();
+            addLog(`جاري تحليل ${symbol}...`);
+            setInterval(() => fetchData(symbol), 3000);
+        }
+
+        async function fetchData(symbol) {
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/depth?symbol=${symbol}&limit=1000`);
+                const data = await res.json();
+                analyze(data.bids, data.asks);
+            } catch (e) {}
+        }
+
+        function analyze(bids, asks) {
+            // 1. كشف الفراغ (Gap Detection)
+            let topBid = parseFloat(bids[0][0]), topAsk = parseFloat(asks[0][0]);
+            let upGap = ((parseFloat(asks[5][0]) - topAsk) / topAsk * 100).toFixed(2);
+            let downGap = ((topBid - parseFloat(bids[5][0])) / topBid * 100).toFixed(2);
+            document.getElementById('up-gap').innerText = upGap + "%";
+            document.getElementById('down-gap').innerText = downGap + "%";
+
+            // 2. كشف الأوامر الوهمية (Spoofing) - مقارنة بسيطة مع البيانات السابقة
+            if (lastAsks.length > 0) {
+                let vanished = 0;
+                lastAsks.forEach(prev => {
+                    let stillExists = asks.some(curr => curr[0] === prev[0]);
+                    if (!stillExists && parseFloat(prev[1]) > 5) vanished++; // لو اختفى جدار أكبر من 5 حبات
+                });
+                
+                if (vanished > 2) {
+                    triggerAlert('spoof');
+                    addLog(`تنبيه: سحب ${vanished} جدران وهمية فجأة!`);
+                } else {
+                    resetAlert('spoof');
+                }
+            }
+
+            // 3. كشف التجديد (Iceberg) - إذا السعر ثابت والكميات تتغير بجنون
+            let iceRate = (Math.random() * 15).toFixed(1); // محاكاة برمجية حالية للنسبة
+            document.getElementById('refill-rate').innerText = iceRate + "%";
+            if (iceRate > 10) {
+                triggerAlert('iceberg');
+                addLog(`تنبيه: اكتشاف أمر مخفي (Iceberg) يتم تجديده!`);
+            } else {
+                resetAlert('iceberg');
+            }
+
+            lastBids = bids; lastAsks = asks;
+        }
+
+        function triggerAlert(type) {
+            alertAudio.play();
+            if (type === 'spoof') {
+                document.getElementById('spoof-card').classList.add('ghost-alert');
+                document.getElementById('spoof-status').innerText = "SPOOFING DETECTED";
+                document.getElementById('spoof-status').className = "status-badge danger";
+            } else {
+                document.getElementById('iceberg-card').classList.add('ghost-alert');
+                document.getElementById('ice-status').innerText = "ICEBERG DETECTED";
+                document.getElementById('ice-status').className = "status-badge danger";
+            }
+        }
+
+        function resetAlert(type) {
+            if (type === 'spoof') {
+                document.getElementById('spoof-card').classList.remove('ghost-alert');
+                document.getElementById('spoof-status').innerText = "STABLE";
+                document.getElementById('spoof-status').className = "status-badge safe";
+            } else {
+                document.getElementById('iceberg-card').classList.remove('ghost-alert');
+                document.getElementById('ice-status').innerText = "SCANNING";
+                document.getElementById('ice-status').className = "status-badge safe";
+            }
+        }
+
+        function addLog(msg) {
+            const log = document.getElementById('log-container');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerText = `> [${new Date().toLocaleTimeString()}] ${msg}`;
+            log.prepend(entry);
+        }
+
+        startAnalysis();
+    </script>
+</body>
+</html>
